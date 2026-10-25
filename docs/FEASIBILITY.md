@@ -4,17 +4,23 @@ Investigation date: 2026-10-25. Target: one local Codex session in VS Code. Othe
 
 ## Decision
 
-**CONDITIONAL GO for further feasibility work; NO-GO for full implementation today.**
+**CONDITIONAL GO for an App Server-backed session picker; NO-GO for a hook-only product.**
 
 The local protocol handshake works. Observation of the installed IDE session does not yet work through the tested proxy route. No real running, input-wait, completion, or failure transition has been captured. A desktop UI would not resolve this missing evidence.
 
-Proceed only after a real-session experiment establishes a supported, correctly correlated event source. Do not interpret approval of this document as proof of integration or permission to replace the IDE session with an Eyroz-owned agent.
+Proceed only after a real-session experiment establishes that an App Server observer receives live updates for an IDE-owned thread. Do not interpret this document as proof that a second App Server process observes a running IDE conversation, or as permission to replace the IDE session with an Eyroz-owned agent.
+
+### 2026-10-25 App Server thread-list result
+
+The new read-only probe started a separate local `codex app-server` process with the normal user Codex state, completed initialization, and called `thread/list` restricted to `sourceKinds: ["vscode"]` and this repository's exact working directory. It returned **2** VS Code threads. It did not send a prompt, resume a thread, inspect conversation content, or mutate any conversation.
+
+This validates that Eyroz can provide a low-friction workspace session picker using the existing local Codex login rather than asking every user to install and trust project hooks. The current official App Server documentation lists VS Code as an interactive thread source and documents `thread/list`, user-facing thread names, `thread/status/changed`, and turn lifecycle notifications. Live cross-client event delivery remains unverified and is the next gate.
 
 ### Session selection update
 
-A workspace is not a Codex session. A single workspace may host multiple sessions concurrently. Hook events include `session_id`, so Eyroz can discover and present those identities as `workspace · short-session-id`, then bind its single widget to the session explicitly selected by the user. Events for any other discovered session must never update the selected widget. Hook data does not expose a stable human-readable conversation title, so Eyroz must not invent one or read the unsupported transcript format to obtain it.
+A workspace is not a Codex session. A single workspace may host multiple sessions concurrently. The recommended picker must use App Server `thread/list` with the exact workspace path and its documented VS Code source filter. Eyroz can display returned user-facing thread names and bind its single widget to the selected thread ID. Events for any other listed session must never update the selected widget. Hook-based fallback identities are `workspace · short-session-id`; they must not be presented as conversation names.
 
-This solves identity isolation for the single-session MVP. It does not solve full lifecycle fidelity: hooks prove some lifecycle points and tool activity, while only the app-server turn stream documents authoritative `started`, `completed`, `interrupted`, and `failed` outcomes for the thread it owns or is connected to.
+This solves identity isolation and session discovery for the single-session MVP. It does not yet solve live lifecycle fidelity: hooks prove some lifecycle points and tool activity, while the App Server turn stream documents authoritative `started`, `completed`, `interrupted`, and `failed` outcomes only after cross-client observation has been proven.
 
 ## Investigated mechanisms
 

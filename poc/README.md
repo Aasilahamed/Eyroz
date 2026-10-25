@@ -15,6 +15,12 @@ On macOS use the absolute native executable path. Do not pass a .cmd/.ps1 launch
 
 Both modes have an eight-second response deadline, a 1 MiB buffer limit, no shell execution and no automatic retry. They terminate only their own child process. Output omits raw payloads, identifiers and stderr. Paginated counts are explicitly only one page. Neither mode starts, resumes, interrupts or modifies a conversation, nor answers an approval request.
 
+### VS Code thread-list experiment
+
+`node poc/list-local-vscode-threads.mjs` starts a separate local `codex app-server` process using the normal Codex state and performs only the documented `initialize` handshake plus `thread/list` for `sourceKinds: ["vscode"]` and the current working directory. Its redacted result reports a count only. It is a feasibility experiment, not a production integration: a positive result still needs live status-event testing, while a zero result means this app-server process cannot presently see a matching persisted VS Code thread.
+
+Actual Windows run on 2026-10-25: handshake succeeded and returned `vscodeThreads: 2` for this workspace. No conversation content, identifiers, or thread metadata were printed.
+
 ## Actual run: Windows, 2026-10-25
 
 Node v22.13.1; Codex CLI 0.149.0; installed VS Code extension openai.chatgpt 26.908.40401.
