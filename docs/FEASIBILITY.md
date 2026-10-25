@@ -10,6 +10,12 @@ The local protocol handshake works. Observation of the installed IDE session doe
 
 Proceed only after a real-session experiment establishes a supported, correctly correlated event source. Do not interpret approval of this document as proof of integration or permission to replace the IDE session with an Eyroz-owned agent.
 
+### Session selection update
+
+A workspace is not a Codex session. A single workspace may host multiple sessions concurrently. Hook events include `session_id`, so Eyroz can discover and present those identities as `workspace · short-session-id`, then bind its single widget to the session explicitly selected by the user. Events for any other discovered session must never update the selected widget. Hook data does not expose a stable human-readable conversation title, so Eyroz must not invent one or read the unsupported transcript format to obtain it.
+
+This solves identity isolation for the single-session MVP. It does not solve full lifecycle fidelity: hooks prove some lifecycle points and tool activity, while only the app-server turn stream documents authoritative `started`, `completed`, `interrupted`, and `failed` outcomes for the thread it owns or is connected to.
+
 ## Investigated mechanisms
 
 ### App-server

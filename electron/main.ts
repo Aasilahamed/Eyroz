@@ -12,7 +12,7 @@ let mainWindow: BrowserWindow | null = null;
 const compactBounds = { width: 292, height: 86 };
 const expandedBounds = { width: 392, height: 610 };
 const bridgePort = 18742;
-const supportedHookEvents = new Set(['SessionStart', 'PreToolUse', 'PermissionRequest', 'Stop', 'Interrupt', 'SessionEnd']);
+const supportedHookEvents = new Set(['SessionStart', 'PreToolUse', 'PostToolUse', 'PermissionRequest', 'Stop', 'Interrupt', 'SessionEnd']);
 let bridgeSecret = '';
 let attachedWorkspace: string | undefined;
 let bridgeReady = Promise.resolve();
@@ -22,6 +22,7 @@ type BridgeSnapshot = {
   confirmed: boolean;
   evidence: 'hook';
   workspace: string;
+  sessionId: string;
   sessionLabel: string;
   detail: string;
   connection: 'connected' | 'disconnected' | 'unverified';
@@ -69,7 +70,7 @@ function snapshotFromHook(input: Record<string, unknown>): BridgeSnapshot | null
   const sessionId = input.session_id;
   if (typeof hook !== 'string' || typeof workspace !== 'string' || typeof sessionId !== 'string' || !supportedHookEvents.has(hook) || !path.isAbsolute(workspace) || workspace !== attachedWorkspace) return null;
   const sessionLabel = `${path.basename(workspace)} · ${sessionId.slice(-6)}`;
-  const base = { evidence: 'hook' as const, workspace, sessionLabel };
+  const base = { evidence: 'hook' as const, workspace, sessionId, sessionLabel };
   if (hook === 'PreToolUse') return { ...base, state: 'RUNNING', confirmed: true, connection: 'connected', detail: 'Codex is actively using a tool in this session.' };
   if (hook === 'SessionEnd') return { ...base, state: 'DISCONNECTED', confirmed: false, connection: 'disconnected', detail: 'This Codex session ended.' };
   if (hook === 'SessionStart') return { ...base, state: 'UNKNOWN', confirmed: false, connection: 'connected', detail: 'Connected to this Codex session. Waiting for verified activity.' };
@@ -110,13 +111,22 @@ async function installWorkspaceBridge(workspace: string) {
   await fs.mkdir(codexDir, { recursive: true });
   let config: Record<string, unknown> = {};
   try { config = JSON.parse(await fs.readFile(hooksFile, 'utf8')) as Record<string, unknown>; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw new Error('Existing .codex/hooks.json is not valid JSON.'); }
+  const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+  const hooks = isRecord(config.hooks) ? config.hooks : {};
+  for (const event of supportedHookEvents) {
+    if (Array.isArray(config[event]) && !Array.isArray(hooks[event])) {
+      hooks[event] = config[event];
+      delete config[event];
+    }
+  }
   const command = `node \"${hookFile.replaceAll('\\', '/')}\"`;
   for (const event of supportedHookEvents) {
-    const groups = Array.isArray(config[event]) ? config[event] as Array<Record<string, unknown>> : [];
+    const groups = Array.isArray(hooks[event]) ? hooks[event] as Array<Record<string, unknown>> : [];
     const alreadyInstalled = groups.some(group => Array.isArray(group.hooks) && group.hooks.some(hook => typeof hook === 'object' && hook !== null && (hook as Record<string, unknown>).command === command));
     if (!alreadyInstalled) groups.push({ hooks: [{ type: 'command', command, commandWindows: `node \"${hookFile}\"`, timeout: 3 }] });
-    config[event] = groups;
+    hooks[event] = groups;
   }
+  config.hooks = hooks;
   await fs.writeFile(hookFile, hookScript(bridgeSecret), { mode: 0o600 });
   await fs.writeFile(hooksFile, `${JSON.stringify(config, null, 2)}\n`);
   attachedWorkspace = workspace;
@@ -126,8 +136,17 @@ async function installWorkspaceBridge(workspace: string) {
 
 function runVersionProbe(): Promise<{ connected: boolean; detail: string }> {
   return new Promise(resolve => {
-    const command = process.platform === 'win32' ? 'codex.cmd' : 'codex';
-    const child = spawn(command, ['--version'], { windowsHide: true, shell: false });
+    // Windows rejects direct spawning of the codex.cmd shim with shell: false.
+    // This command is fixed; it never contains workspace or user supplied input.
+    const command = process.platform === 'win32' ? process.env.ComSpec ?? 'cmd.exe' : 'codex';
+    const args = process.platform === 'win32' ? ['/d', '/s', '/c', 'codex --version'] : ['--version'];
+    let child;
+    try {
+      child = spawn(command, args, { windowsHide: true, shell: false });
+    } catch {
+      resolve({ connected: false, detail: 'Codex CLI could not be started.' });
+      return;
+    }
     let output = '';
     const timer = setTimeout(() => { child.kill(); resolve({ connected: false, detail: 'Codex command timed out.' }); }, 5000);
     child.stdout.on('data', chunk => { output += String(chunk); });
