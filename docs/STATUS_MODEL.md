@@ -12,7 +12,7 @@ The status engine is deliberately conservative. A beautiful green animation must
 | `STALE` | Previously confirmed activity exceeded freshness window | Dim neutral eyes |
 | `UNKNOWN` | No reliable source or unsupported data | Neutral eyes |
 
-Each `SessionSnapshot` records its state, confirmation flag, evidence source, local receipt timestamp, connection health, optional workspace and user-safe detail. The present code has three possible evidence sources: `app-server`, `hook`, and `cli-availability`. CLI availability can never establish a confirmed session state.
+Each `SessionSnapshot` records its state, confirmation flag, evidence source, local receipt timestamp, connection health, optional workspace and user-safe detail. The present code has three possible evidence sources: `app-server`, `hook`, and `cli-availability`. CLI availability can never establish a confirmed session state. The hook bridge labels a session as `workspace · short-session-id`; documented hook events do not provide a friendly conversation name.
 
 ## Rules
 

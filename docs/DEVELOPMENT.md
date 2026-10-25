@@ -29,4 +29,16 @@ Packaging is not configured yet. A Windows installer needs a Windows package/sig
 4. Click **Check Codex CLI**. If the CLI is installed, expect a message about CLI availability while state remains `UNKNOWN`.
 5. Enable reduced motion in the operating system and confirm eye movement stops.
 
-Direct IDE focus and live Codex session events remain unverified and therefore are intentionally disabled in this build.
+Direct IDE focus remains unverified and disabled. Live Codex session events require the opt-in local hook bridge below.
+
+## Attach Eyroz to a Codex session
+
+1. Start Eyroz and open its compact panel with the chevron.
+2. Click **Attach workspace** and choose the project open in your Codex IDE session.
+3. Eyroz writes `.codex/hooks.json` and `.codex/eyroz-bridge.mjs` inside that project. Existing hooks are retained; duplicate Eyroz hooks are not added.
+4. Review and trust the project hooks when Codex asks. This is required by Codex for project-local hooks.
+5. Start or resume the Codex session. The capsule becomes labeled as `workspace · short-session-id` after its first lifecycle event.
+
+The hook bridge is local-only and listens on `127.0.0.1`. It sends only session ID, working directory, hook event name and turn ID. It does not parse transcripts or send prompts, source code, assistant text or tool arguments. If Eyroz is closed, hooks return normally without affecting Codex.
+
+`PreToolUse` is the only mapped confirmed activity signal because it proves Codex is invoking a tool. `SessionStart` attaches identity. `PermissionRequest`, `Stop` and `Interrupt` stay `UNKNOWN`, since hooks alone cannot prove that the interface is waiting on you or that a turn completed successfully. `SessionEnd` becomes `DISCONNECTED`.

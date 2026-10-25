@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { disconnect, type SessionSnapshot, unknownSession } from '../status/model';
 import { Eyes } from './Eyes';
 
@@ -14,13 +14,31 @@ const statusCopy: Record<SessionSnapshot['state'], string> = {
 
 function title(state: SessionSnapshot['state']) { return state.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, letter => letter.toUpperCase()); }
 
+function isBridgeSnapshot(value: unknown): value is Omit<SessionSnapshot, 'receivedAt'> & { sessionLabel: string } {
+  if (!value || typeof value !== 'object') return false;
+  const event = value as Record<string, unknown>;
+  return ['RUNNING', 'UNKNOWN', 'DISCONNECTED'].includes(String(event.state))
+    && typeof event.confirmed === 'boolean'
+    && event.evidence === 'hook'
+    && typeof event.workspace === 'string'
+    && typeof event.sessionLabel === 'string'
+    && typeof event.detail === 'string'
+    && ['connected', 'disconnected', 'unverified'].includes(String(event.connection));
+}
+
 export function App() {
   const [expanded, setExpanded] = useState(false);
   const [session, setSession] = useState<SessionSnapshot>(() => unknownSession());
   const [probing, setProbing] = useState(false);
   const [workspace, setWorkspace] = useState('No verified session');
+  const [attaching, setAttaching] = useState(false);
   useLayoutEffect(() => { window.eyroz?.resize(expanded); }, [expanded]);
   useLayoutEffect(() => { void window.eyroz?.identity().then(value => setWorkspace(value.workspace)); }, []);
+  useEffect(() => window.eyroz?.onSessionEvent(event => {
+    if (!isBridgeSnapshot(event)) return;
+    setWorkspace(event.sessionLabel);
+    setSession({ ...event, receivedAt: Date.now() });
+  }), []);
 
   async function probe() {
     setProbing(true);
@@ -29,6 +47,19 @@ export function App() {
     setSession(current => result?.connected
       ? { ...current, detail: `${result.detail} No verified IDE-session bridge is connected.`, receivedAt: Date.now(), connection: 'unverified' }
       : disconnect(current, result?.detail ?? 'Desktop bridge is unavailable.'));
+  }
+
+  async function attachWorkspace() {
+    const selected = await window.eyroz?.chooseWorkspace();
+    if (!selected) return;
+    setAttaching(true);
+    try {
+      const result = await window.eyroz?.installBridge(selected);
+      setWorkspace(result?.label ?? workspace);
+      setSession(current => ({ ...current, detail: result?.detail ?? 'Bridge setup did not return a result.', receivedAt: Date.now() }));
+    } catch (error) {
+      setSession(current => disconnect(current, error instanceof Error ? error.message : 'Bridge installation failed.'));
+    } finally { setAttaching(false); }
   }
 
   return <main className={expanded ? 'shell shell--expanded' : 'shell'}>
@@ -52,7 +83,7 @@ export function App() {
         <p><span>Last updated</span><b>{new Date(session.receivedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</b></p>
       </div>
       <p className="note">{session.detail}</p>
-      <div className="actions"><button onClick={probe} disabled={probing}>{probing ? 'Checking Codex…' : 'Check Codex CLI'}</button><button className="secondary" onClick={() => window.eyroz?.close()}>Hide Eyroz</button></div>
+      <div className="actions"><button onClick={attachWorkspace} disabled={attaching}>{attaching ? 'Installing bridge...' : 'Attach workspace'}</button><button className="secondary" onClick={probe} disabled={probing}>{probing ? 'Checking...' : 'Check Codex'}</button></div>
     </section>}
   </main>;
 }
