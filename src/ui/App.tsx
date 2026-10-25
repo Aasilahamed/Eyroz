@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { disconnect, type SessionSnapshot, unknownSession } from '../status/model';
 import { Eyes } from './Eyes';
 
@@ -18,7 +18,9 @@ export function App() {
   const [expanded, setExpanded] = useState(false);
   const [session, setSession] = useState<SessionSnapshot>(() => unknownSession());
   const [probing, setProbing] = useState(false);
-  useEffect(() => { window.eyroz?.resize(expanded); }, [expanded]);
+  const [workspace, setWorkspace] = useState('No verified session');
+  useLayoutEffect(() => { window.eyroz?.resize(expanded); }, [expanded]);
+  useLayoutEffect(() => { void window.eyroz?.identity().then(value => setWorkspace(value.workspace)); }, []);
 
   async function probe() {
     setProbing(true);
@@ -31,14 +33,14 @@ export function App() {
 
   return <main className={expanded ? 'shell shell--expanded' : 'shell'}>
     <section className="widget" onDoubleClick={() => setExpanded(value => !value)}>
-      <div className="drag-region"><Eyes state={session.state} compact={!expanded} /></div>
-      <button className="chevron" onClick={() => setExpanded(value => !value)} aria-label={expanded ? 'Collapse Eyroz' : 'Open Eyroz'}>{expanded ? '×' : '⌃'}</button>
+      <div className="drag-region"><span className="session-label" title={workspace}>{workspace}</span><Eyes state={session.state} compact /></div>
+      <button className="chevron" onClick={() => setExpanded(value => !value)} aria-label={expanded ? 'Collapse Eyroz' : 'Open Eyroz'}>{expanded ? 'x' : '^'}</button>
     </section>
     {expanded && <section className="panel" aria-live="polite">
       <header><div className="brand"><Eyes state={session.state} compact /><div><strong>Eyroz</strong><span>AI Signal</span></div></div><span className={`badge badge--${session.state.toLowerCase().replaceAll('_', '-')}`}>{title(session.state)}</span></header>
       <div className="session-card">
-        <div className="ide-icon">&lt;/&gt;</div><div><strong>Codex IDE session</strong><span>Codex · VS Code</span></div>
-        <button disabled title="Direct session focusing is not verified yet">Open in IDE ↗</button>
+        <div className="ide-icon">&lt;/&gt;</div><div><strong>{workspace}</strong><span>Codex · VS Code · unverified</span></div>
+        <button disabled title="Direct session focusing is not verified yet">Open in IDE</button>
       </div>
       <div className={`status-card status-card--${session.state.toLowerCase().replaceAll('_', '-')}`}>
         <div><span className="status-dot" /><strong>{title(session.state)}</strong><p>{statusCopy[session.state]}</p></div>

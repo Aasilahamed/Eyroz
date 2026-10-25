@@ -6,15 +6,19 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const devUrl = process.env.VITE_DEV_SERVER_URL;
+let mainWindow: BrowserWindow | null = null;
+const compactBounds = { width: 292, height: 86 };
+const expandedBounds = { width: 392, height: 610 };
+
+if (!app.requestSingleInstanceLock()) app.quit();
 
 function createWindow() {
   const window = new BrowserWindow({
-    width: 420,
-    height: 160,
-    minWidth: 340,
-    minHeight: 132,
-    maxWidth: 520,
-    maxHeight: 720,
+    ...compactBounds,
+    minWidth: compactBounds.width,
+    minHeight: compactBounds.height,
+    maxWidth: expandedBounds.width,
+    maxHeight: expandedBounds.height,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -24,7 +28,9 @@ function createWindow() {
   });
   window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   window.setMenuBarVisibility(false);
+  window.on('closed', () => { mainWindow = null; });
   if (devUrl) void window.loadURL(devUrl); else void window.loadFile(path.join(root, '../dist/index.html'));
+  mainWindow = window;
   return window;
 }
 
@@ -46,6 +52,7 @@ function runVersionProbe(): Promise<{ connected: boolean; detail: string }> {
 app.whenReady().then(() => {
   createWindow();
   ipcMain.handle('eyroz:probe-codex', runVersionProbe);
+  ipcMain.handle('eyroz:identity', () => ({ workspace: path.basename(process.cwd()) || 'Eyroz' }));
   ipcMain.handle('eyroz:open-workspace', async (_event, workspace?: string) => {
     if (!workspace || !path.isAbsolute(workspace) || !existsSync(workspace)) return false;
     const result = await shell.openPath(workspace);
@@ -53,10 +60,16 @@ app.whenReady().then(() => {
   });
   ipcMain.on('eyroz:resize', (event, expanded: boolean) => {
     const window = BrowserWindow.fromWebContents(event.sender);
-    if (window) window.setSize(expanded ? 440 : 420, expanded ? 618 : 160, true);
+    if (window) window.setBounds(expanded ? expandedBounds : compactBounds, true);
   });
   ipcMain.on('eyroz:close', event => BrowserWindow.fromWebContents(event.sender)?.hide());
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+  app.on('activate', () => { if (!mainWindow) createWindow(); else mainWindow.show(); });
+});
+
+app.on('second-instance', () => {
+  if (!mainWindow) return;
+  mainWindow.show();
+  mainWindow.focus();
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
