@@ -11,6 +11,6 @@ contextBridge.exposeInMainWorld('eyroz', {
     return () => ipcRenderer.removeListener('eyroz:session-event', callback);
   },
   openWorkspace: (workspace?: string) => ipcRenderer.invoke('eyroz:open-workspace', workspace) as Promise<boolean>,
-  resize: (expanded: boolean) => ipcRenderer.send('eyroz:resize', expanded),
+  setExpanded: (expanded: boolean) => ipcRenderer.invoke('eyroz:set-expanded', expanded) as Promise<[number, number] | undefined>,
   close: () => ipcRenderer.send('eyroz:close'),
 });
