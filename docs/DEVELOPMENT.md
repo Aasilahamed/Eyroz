@@ -37,7 +37,7 @@ Direct IDE focus remains unverified and disabled. Live Codex session events requ
 2. Click **Attach workspace** and choose the project open in your Codex IDE session.
 3. Eyroz writes `.codex/hooks.json` and `.codex/eyroz-bridge.mjs` inside that project. Existing hooks are retained; duplicate Eyroz hooks are not added.
 4. Review and trust the project hooks when Codex asks. This is required by Codex for project-local hooks.
-5. Start or resume the Codex session. The capsule becomes labeled as `workspace · short-session-id` after its first lifecycle event.
+5. Start or resume the Codex session and let it make a local tool call. The panel then shows it under **Discovered sessions** as `workspace · short-session-id`; select it before Eyroz accepts its status updates. The capsule is labeled with that selected session only.
 
 The hook bridge is local-only and listens on `127.0.0.1`. It sends only session ID, working directory, hook event name and turn ID. It does not parse transcripts or send prompts, source code, assistant text or tool arguments. If Eyroz is closed, hooks return normally without affecting Codex.
 

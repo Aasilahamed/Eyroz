@@ -52,7 +52,7 @@ export function App() {
     const result = await window.eyroz?.probeCodex();
     setProbing(false);
     setSession(current => result?.connected
-      ? { ...current, detail: `${result.detail} No verified IDE-session bridge is connected.`, receivedAt: Date.now(), connection: 'unverified' }
+      ? { ...current, detail: `${result.detail} Session discovery begins after the workspace hook is trusted and Codex emits an event.`, receivedAt: Date.now(), connection: 'unverified' }
       : disconnect(current, result?.detail ?? 'Desktop bridge is unavailable.'));
   }
 
@@ -104,6 +104,7 @@ export function App() {
         <p><span>Last updated</span><b>{new Date(session.receivedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</b></p>
       </div>
       <p className="note">{session.detail}</p>
+      {sessions.length === 0 && <p className="discovery-hint">No sessions discovered yet. In Codex, review and trust the Eyroz project hook, then start or resume a session and let it perform a local tool action. Sessions will appear here.</p>}
       {sessions.length > 0 && <div className="sessions" aria-label="Discovered Codex sessions">
         <span>Discovered sessions</span>
         {sessions.map(candidate => <button key={candidate.id} className={candidate.id === selectedSessionId ? 'session-choice session-choice--selected' : 'session-choice'} onClick={() => selectSession(candidate)}>{candidate.label}{candidate.id === selectedSessionId ? ' · selected' : ''}</button>)}
