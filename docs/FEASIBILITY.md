@@ -16,6 +16,8 @@ The new read-only probe started a separate local `codex app-server` process with
 
 This validates that Eyroz can provide a low-friction workspace session picker using the existing local Codex login rather than asking every user to install and trust project hooks. The current official App Server documentation lists VS Code as an interactive thread source and documents `thread/list`, user-facing thread names, `thread/status/changed`, and turn lifecycle notifications. Live cross-client event delivery remains unverified and is the next gate.
 
+Follow-up: `thread/resume` against a thread listed by the separate App Server process was rejected by the installed CLI with JSON-RPC code `-32600`, even when using the version-matched generated request schema. Eyroz therefore ships the picker only as verified metadata discovery and does not claim that it can subscribe to live events from an IDE-owned thread.
+
 ### Session selection update
 
 A workspace is not a Codex session. A single workspace may host multiple sessions concurrently. The recommended picker must use App Server `thread/list` with the exact workspace path and its documented VS Code source filter. Eyroz can display returned user-facing thread names and bind its single widget to the selected thread ID. Events for any other listed session must never update the selected widget. Hook-based fallback identities are `workspace · short-session-id`; they must not be presented as conversation names.

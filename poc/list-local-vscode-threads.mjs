@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 // asks for metadata for VS Code threads whose cwd is this workspace.
 const command = process.platform === 'win32' ? process.env.ComSpec ?? 'cmd.exe' : 'codex';
 const args = process.platform === 'win32' ? ['/d', '/s', '/c', 'codex app-server --stdio'] : ['app-server', '--stdio'];
-const report = { handshake: false, workspace: process.cwd(), vscodeThreads: 0, outcome: 'STARTING' };
+const report = { handshake: false, workspace: process.cwd(), vscodeThreads: 0, namedThreads: 0, outcome: 'STARTING' };
 
 await new Promise(resolve => {
   let child;
@@ -46,6 +46,7 @@ await new Promise(resolve => {
         } else if (message.id === 2) {
           if (message.error || !Array.isArray(message.result?.data)) return finish('LIST_REJECTED');
           report.vscodeThreads = message.result.data.length;
+          report.namedThreads = message.result.data.filter(thread => typeof thread?.name === 'string' && thread.name.trim()).length;
           finish('PROTOCOL_OK');
         }
       } catch { finish('INVALID_RESPONSE'); }

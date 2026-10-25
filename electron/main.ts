@@ -5,6 +5,7 @@ import { existsSync, promises as fs } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { CodexAppServer } from './app-server.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const devUrl = process.env.VITE_DEV_SERVER_URL;
@@ -16,6 +17,7 @@ const supportedHookEvents = new Set(['SessionStart', 'PreToolUse', 'PostToolUse'
 let bridgeSecret = '';
 let attachedWorkspace: string | undefined;
 let bridgeReady = Promise.resolve();
+const appServer = new CodexAppServer();
 
 type BridgeSnapshot = {
   state: 'RUNNING' | 'UNKNOWN' | 'DISCONNECTED';
@@ -164,6 +166,10 @@ app.whenReady().then(() => {
   createWindow();
   ipcMain.handle('eyroz:probe-codex', runVersionProbe);
   ipcMain.handle('eyroz:identity', () => ({ workspace: path.basename(process.cwd()) || 'Eyroz' }));
+  ipcMain.handle('eyroz:list-sessions', async (_event, workspace: string) => {
+    if (!path.isAbsolute(workspace) || !existsSync(workspace)) throw new Error('Choose an existing workspace.');
+    return appServer.listThreads(workspace);
+  });
   ipcMain.handle('eyroz:choose-workspace', async () => {
     const { dialog } = await import('electron');
     const choice = await dialog.showOpenDialog({ properties: ['openDirectory'] });
@@ -190,3 +196,4 @@ app.on('second-instance', () => {
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('before-quit', () => appServer.stop());
