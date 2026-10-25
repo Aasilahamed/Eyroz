@@ -41,7 +41,7 @@ function createWindow() {
     alwaysOnTop: true,
     resizable: true,
     vibrancy: 'under-window',
-    webPreferences: { preload: path.join(root, 'preload.js'), contextIsolation: true, nodeIntegration: false },
+    webPreferences: { preload: path.join(root, 'preload.cjs'), contextIsolation: true, nodeIntegration: false },
   });
   window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   window.setMenuBarVisibility(false);

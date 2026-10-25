@@ -62,10 +62,16 @@ export function App() {
     } finally { setAttaching(false); }
   }
 
+  function togglePanel() {
+    const next = !expanded;
+    window.eyroz?.resize(next);
+    setExpanded(next);
+  }
+
   return <main className={expanded ? 'shell shell--expanded' : 'shell'}>
-    <section className="widget" onDoubleClick={() => setExpanded(value => !value)}>
+    <section className="widget" onDoubleClick={togglePanel}>
       <div className="drag-region"><span className="session-label" title={workspace}>{workspace}</span><Eyes state={session.state} compact /></div>
-      <button className="chevron" onClick={() => setExpanded(value => !value)} aria-label={expanded ? 'Collapse Eyroz' : 'Open Eyroz'}>{expanded ? 'x' : '^'}</button>
+      <button className="chevron" onClick={togglePanel} aria-label={expanded ? 'Collapse Eyroz' : 'Open Eyroz'}>{expanded ? 'x' : '^'}</button>
     </section>
     {expanded && <section className="panel" aria-live="polite">
       <header><div className="brand"><Eyes state={session.state} compact /><div><strong>Eyroz</strong><span>AI Signal</span></div></div><span className={`badge badge--${session.state.toLowerCase().replaceAll('_', '-')}`}>{title(session.state)}</span></header>
