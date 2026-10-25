@@ -9,7 +9,7 @@ declare global {
       installBridge(workspace: string): Promise<{ workspace: string; label: string; detail: string }>;
       onSessionEvent(listener: (snapshot: unknown) => void): () => void;
       openWorkspace(workspace?: string): Promise<boolean>;
-      setExpanded(expanded: boolean): Promise<[number, number] | undefined>;
+      resize(expanded: boolean): void;
       close(): void;
     };
   }

@@ -32,6 +32,7 @@ export function App() {
   const [probing, setProbing] = useState(false);
   const [workspace, setWorkspace] = useState('No verified session');
   const [attaching, setAttaching] = useState(false);
+  useLayoutEffect(() => { window.eyroz?.resize(expanded); }, [expanded]);
   useLayoutEffect(() => { void window.eyroz?.identity().then(value => setWorkspace(value.workspace)); }, []);
   useEffect(() => window.eyroz?.onSessionEvent(event => {
     if (!isBridgeSnapshot(event)) return;
@@ -61,16 +62,10 @@ export function App() {
     } finally { setAttaching(false); }
   }
 
-  async function togglePanel() {
-    const next = !expanded;
-    await window.eyroz?.setExpanded(next);
-    setExpanded(next);
-  }
-
   return <main className={expanded ? 'shell shell--expanded' : 'shell'}>
-    <section className="widget" onDoubleClick={() => void togglePanel()}>
+    <section className="widget" onDoubleClick={() => setExpanded(value => !value)}>
       <div className="drag-region"><span className="session-label" title={workspace}>{workspace}</span><Eyes state={session.state} compact /></div>
-      <button className="chevron" onClick={() => void togglePanel()} aria-label={expanded ? 'Collapse Eyroz' : 'Open Eyroz'}>{expanded ? 'x' : '^'}</button>
+      <button className="chevron" onClick={() => setExpanded(value => !value)} aria-label={expanded ? 'Collapse Eyroz' : 'Open Eyroz'}>{expanded ? 'x' : '^'}</button>
     </section>
     {expanded && <section className="panel" aria-live="polite">
       <header><div className="brand"><Eyes state={session.state} compact /><div><strong>Eyroz</strong><span>AI Signal</span></div></div><span className={`badge badge--${session.state.toLowerCase().replaceAll('_', '-')}`}>{title(session.state)}</span></header>

@@ -39,8 +39,7 @@ function createWindow() {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    resizable: false,
-    useContentSize: true,
+    resizable: true,
     vibrancy: 'under-window',
     webPreferences: { preload: path.join(root, 'preload.js'), contextIsolation: true, nodeIntegration: false },
   });
@@ -157,14 +156,9 @@ app.whenReady().then(() => {
     const result = await shell.openPath(workspace);
     return result === '';
   });
-  ipcMain.handle('eyroz:set-expanded', (event, expanded: boolean) => {
+  ipcMain.on('eyroz:resize', (event, expanded: boolean) => {
     const window = BrowserWindow.fromWebContents(event.sender);
-    if (!window) return undefined;
-    const next = expanded ? expandedBounds : compactBounds;
-    window.setMinimumSize(next.width, next.height);
-    window.setMaximumSize(next.width, next.height);
-    window.setContentSize(next.width, next.height);
-    return window.getContentSize();
+    if (window) window.setBounds(expanded ? expandedBounds : compactBounds, true);
   });
   ipcMain.on('eyroz:close', event => BrowserWindow.fromWebContents(event.sender)?.hide());
   app.on('activate', () => { if (!mainWindow) createWindow(); else mainWindow.show(); });
